@@ -128,5 +128,61 @@ export const likeVideo = async (req, res, next) => {
             })
         }
         video.dislikes = video.dislikes.filter(id => id.toString() !== userId);
+        
+        const likeIndex = video.likes.filter(id => id.toString() !== userId);
+        if(likeIndex > -1) {
+            video.likes.splice(likeIndex,1);
+        }else {
+            video.likes.push(userId)
+        }
+
+        await video.save();
+
+        res.status(200).json(new ApiResponse(200, {
+            likes: video.likes.length,
+            dislikes: video.dislikes.length
+        }, 'Video liked successfully'));
+    } catch (error) {
+        next(new ApiError(500, error.message));
     }
-}
+};
+
+export const dislikesVideo = async (req, res, next) => {
+    try {
+        const {id} = req.params;
+        const userId = req.user.id;
+
+        let video  =  await Video.findOne({videoId: id});
+
+        if(!video) {
+            const youtubeVideo  = await youtubeService.getVideoDetails(id);
+
+                video = new Video({
+                    videoId: youtubeVideo.id,
+                    title: youtubeVideo.snippet.title,
+                    description: youtubeVideo.snippet.description,
+                    thumbnail: youtubeVideo.snippet.thumbnails.high.url,
+                    channelTitle: youtubeVideo.snippet.channelTitle,
+                    channelId: youtubeVideo.snippet.channelId,
+                    publishedAt: youtubeVideo.snippet.publishedAt,
+                })
+        }
+
+        video.likes = video.likes.filter(id => id.toString() !== userId);
+        const dislikeIndex = video.dislikes.findIndex(id = id.toString() === userId);
+        if(dislikeIndex > -1) {
+            video.dislikeIndex.splice(dislikeIndex, 1);
+        }else {
+            video.dislikes.push(userId)
+        }
+
+        await video.save()
+
+        res.status(200).json(new ApiResponse(200, {
+            likes: video.likes.length,
+            dislikes: video.dislikes.length
+        }, 'Video disliked successfully'))
+    }catch (error) {
+        next(new ApiError(500, error.message));
+    }
+};
